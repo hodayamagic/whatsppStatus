@@ -489,7 +489,7 @@
     </div>
 
 </body>
-	<script src="https://apis.google.com/js/api.js"></script>
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         // משתנים גלובליים
         let uploadedFiles = [];
@@ -498,6 +498,7 @@
         let isGoogleConnected = false;
 		const CLIENT_ID = '845358594578-ev7agc5jb54fr1unel30otpf8cs7ptaa.apps.googleusercontent.com';
 		const API_KEY = 'AIzaSyBp5f01Y2wZNuO2b5IO5e9RfVUcem5_08c';
+		let tokenClient;
 
 			const DISCOVERY_DOCS = ["https://people.googleapis.com/$discovery/rest?version=v1"];
 			const SCOPES = "https://www.googleapis.com/auth/contacts.readonly";
@@ -789,25 +790,21 @@
         }
 
         // פונקציות הגדרות
-       function connectGoogleContacts() {
-	   console.log("connectGoogleContacts");
-     gapi.load('client:auth2', () => {
-        gapi.client.init({
-            apiKey: API_KEY,
-            clientId: CLIENT_ID,
-            discoveryDocs: ["https://people.googleapis.com/$discovery/rest?version=v1"],
-            scope: "https://www.googleapis.com/auth/contacts.readonly"
-        }).then(() => {
-            return gapi.auth2.getAuthInstance().signIn();
-        }).then(() => {
-            isGoogleConnected = true;
-            showSuccess("התחברת ל-Google ✅");
-            loadGoogleContacts();
-        }).catch(error => {
-            console.error(error);
-            showError("שגיאה בהתחברות: " + error.message);
-        });
-    });
+     function connectGoogleContacts() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/contacts.readonly',
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        showError('שגיאה בקבלת Access Token');
+        return;
+      }
+      showSuccess('התחברת ל-Google ✅');
+      await loadGoogleContacts(tokenResponse.access_token);
+    },
+  });
+
+  tokenClient.requestAccessToken();
 }
 
 
