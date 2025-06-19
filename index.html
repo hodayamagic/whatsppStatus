@@ -487,13 +487,20 @@
             </div>
         </div>
     </div>
+	<script src="https://apis.google.com/js/api.js"></script>
 
+</body>
     <script>
         // משתנים גלובליים
         let uploadedFiles = [];
         let selectedContacts = [];
         let googleContacts = [];
         let isGoogleConnected = false;
+		const CLIENT_ID = '845358594578-ev7agc5jb54fr1unel30otpf8cs7ptaa.apps.googleusercontent.com';
+		const API_KEY = 'AIzaSyBp5f01Y2wZNuO2b5IO5e9RfVUcem5_08c';
+
+			const DISCOVERY_DOCS = ["https://people.googleapis.com/$discovery/rest?version=v1"];
+			const SCOPES = "https://www.googleapis.com/auth/contacts.readonly";
 
         // פונקציות ניהול טאבים
         function showTab(tabName, event) {
@@ -667,25 +674,42 @@
         }
 
         // פונקציות אנשי קשר
-        async function loadGoogleContacts() {
-            if (!isGoogleConnected) {
-                showError('יש להתחבר תחילה ל-Google Contacts');
-                return;
-            }
+       async function loadGoogleContacts() {
+    if (!isGoogleConnected) {
+        showError("יש להתחבר תחילה ל-Google");
+        return;
+    }
 
-            document.getElementById('contactsLoading').style.display = 'block';
+    document.getElementById('contactsLoading').style.display = 'block';
 
-            try {
-                // כאן תהיה האינטגרציה האמיתית עם Google Contacts API
-                await simulateContactsLoad();
-                displayContacts(googleContacts);
-                showSuccess('אנשי הקשר נטענו בהצלחה!');
-            } catch (error) {
-                showError('שגיאה בטעינת אנשי קשר: ' + error.message);
-            } finally {
-                document.getElementById('contactsLoading').style.display = 'none';
+    try {
+        const response = await gapi.client.people.people.connections.list({
+            resourceName: 'people/me',
+            personFields: 'names,emailAddresses,phoneNumbers',
+            pageSize: 50
+        });
+
+        googleContacts = [];
+
+        response.result.connections?.forEach(person => {
+            const name = person.names?.[0]?.displayName || 'לא ידוע';
+            const phone = person.phoneNumbers?.[0]?.value || '';
+            const email = person.emailAddresses?.[0]?.value || '';
+
+            if (phone) {
+                googleContacts.push({ name, phone, email });
             }
-        }
+        });
+
+        displayContacts(googleContacts);
+        showSuccess("אנשי הקשר סונכרנו בהצלחה!");
+    } catch (error) {
+        showError("שגיאה בסנכרון: " + error.message);
+    } finally {
+        document.getElementById('contactsLoading').style.display = 'none';
+    }
+}
+
 
         async function simulateContactsLoad() {
             // דמיית טעינת אנשי קשר
@@ -765,17 +789,26 @@
         }
 
         // פונקציות הגדרות
-        async function connectGoogleContacts() {
-            // כאן תהיה האינטגרציה האמיתית עם Google API
-            try {
-                // סימולציה של התחברות
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                isGoogleConnected = true;
-                showSuccess('התחברות ל-Google Contacts הושלמה בהצלחה! ✅');
-            } catch (error) {
-                showError('שגיאה בהתחברות ל-Google Contacts: ' + error.message);
-            }
-        }
+       function connectGoogleContacts() {
+    gapi.load('client:auth2', () => {
+        gapi.client.init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: DISCOVERY_DOCS,
+            scope: SCOPES
+        }).then(() => {
+            return gapi.auth2.getAuthInstance().signIn();
+        }).then(() => {
+            isGoogleConnected = true;
+            showSuccess("התחברות ל-Google הושלמה ✅");
+            loadGoogleContacts();
+        }).catch(error => {
+            console.error(error);
+            showError("שגיאה בהתחברות ל-Google");
+        });
+    });
+}
+
 
         function saveSettings() {
             const apiToken = document.getElementById('apiToken').value;
