@@ -675,25 +675,24 @@
         }
 
         // פונקציות אנשי קשר
-       async function loadGoogleContacts() {
-    if (!isGoogleConnected) {
-        showError("יש להתחבר תחילה ל-Google");
-        return;
-    }
-
+    async function loadGoogleContacts(accessToken) {
     document.getElementById('contactsLoading').style.display = 'block';
 
     try {
-        const response = await gapi.client.people.people.connections.list({
-            resourceName: 'people/me',
-            personFields: 'names,emailAddresses,phoneNumbers',
-            pageSize: 50
-        });
+        const response = await fetch(
+            'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers&pageSize=100',
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
 
+        const data = await response.json();
         googleContacts = [];
 
-        response.result.connections?.forEach(person => {
-            const name = person.names?.[0]?.displayName || 'לא ידוע';
+        data.connections?.forEach(person => {
+            const name = person.names?.[0]?.displayName || 'ללא שם';
             const phone = person.phoneNumbers?.[0]?.value || '';
             const email = person.emailAddresses?.[0]?.value || '';
 
